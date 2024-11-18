@@ -18,12 +18,16 @@ SEARCH_URL = "https://web.joongna.com/search/{}"
 PRODUCT_URL = "https://web.joongna.com/product/{}"
 
 def create_output_directory(keyword):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """ 타임스탬프와 키워드 기반 디렉토리를 output 디렉토리 내에 생성 """
+    base_dir = os.path.join(os.getcwd(), "output")
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
     directory_name = "{} {}".format(timestamp, keyword)
-    output_dir = os.path.join(os.getcwd(), directory_name)
+    output_dir = os.path.join(base_dir, directory_name)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    return output_dir
+    return base_dir, output_dir
 
 def fetch_url_with_retry(url, request_type="GET", max_retries=5, delay=10):
     retries = 0
@@ -105,10 +109,10 @@ def fetch_product_details(product_id, detail_request_count):
     
     return details
 
-def append_to_result_json(data, file_path="result.json"):
-    """ 기존의 result.json 파일에 데이터를 추가합니다. """
-    if os.path.exists(file_path):
-        with open(file_path, "r") as f:
+def append_to_result_json(data, result_json_path):
+    """ result.json 파일에 데이터를 추가 """
+    if os.path.exists(result_json_path):
+        with open(result_json_path, "r") as f:
             existing_data = json.load(f)
             if isinstance(existing_data, list):
                 existing_data.append(data)
@@ -117,9 +121,9 @@ def append_to_result_json(data, file_path="result.json"):
     else:
         existing_data = [data]
 
-    with open(file_path, "w") as f:
+    with open(result_json_path, "w") as f:
         json.dump(existing_data, f, ensure_ascii=False, indent=4)
-    print("[INFO] 결과가 '{}' 파일에 추가되었습니다.".format(file_path).encode('utf-8'))
+    print("[INFO] 결과가 '{}' 파일에 추가되었습니다.".format(result_json_path).encode('utf-8'))
 
 def main():
     parser = argparse.ArgumentParser(description="중고나라 검색 크롤러")
@@ -127,15 +131,16 @@ def main():
     parser.add_argument('page_limit', type=int, help="한 번에 검색할 페이지 수 (예: 10)")
     args = parser.parse_args()
     
-    keyword = args.keyword
+    keyword = args.keyword.decode('utf-8')  # Python 2에서 디코딩 필요
     page_limit = args.page_limit
     print("[INFO] '{}' 키워드로 {} 페이지씩 검색을 시작합니다.".format(keyword, page_limit).encode('utf-8'))
     
-    output_dir = create_output_directory(keyword)
-    start_page = 1
+    base_dir, output_dir = create_output_directory(keyword)  # 키워드 하위 디렉토리 생성
+    result_json_path = os.path.join(base_dir, "result.json")  # result.json은 output 디렉토리에 생성
     total_products = 0
     search_request_count = [0]  # 검색 결과 페이지 요청 횟수
     detail_request_count = [0]  # 상세 페이지 요청 횟수
+    start_page = 1
     start_time = datetime.now()
     
     while True:
@@ -152,6 +157,7 @@ def main():
         
         total_products += len(products)
         
+        # output/키워드 디렉토리 내부에 저장
         filename = "{}_results_{}-{}.json".format(keyword, start_page, end_page)
         file_path = os.path.join(output_dir, filename)
         with open(file_path, "w") as f:
@@ -167,7 +173,7 @@ def main():
     end_time = datetime.now()
     duration = end_time - start_time
     
-    # 요약 정보 생성
+    # 요약 정보 생성 및 저장
     result_summary = {
         "search_keyword": keyword,
         "total_requests": search_request_count[0] + detail_request_count[0],
@@ -179,8 +185,7 @@ def main():
         "duration": str(duration)
     }
     
-    # result.json 파일에 결과 추가
-    append_to_result_json(result_summary)
+    append_to_result_json(result_summary, result_json_path)
 
     print("[INFO] 총 요청 횟수: {}, 검색 결과 페이지 요청 횟수: {}, 상세 페이지 요청 횟수: {}, 크롤링한 상품 수: {}, 작업 시간: {}".format(
         result_summary["total_requests"],

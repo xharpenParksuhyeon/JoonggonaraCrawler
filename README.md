@@ -13,8 +13,25 @@
 - **유연한 파일 경로 지정**: 명령줄 인수로 JSON 파일 경로를 전달 가능. 기본값은 `result.json`.
 - **결과 저장**: 변환된 CSV는 `sorted_results.csv` 파일로 저장.
 
+## 사용 방법
+
+### crawler.py
+`crawler.py`를 실행하여 키워드에 대한 크롤링 작업을 시작합니다.
+
+```bash
+python crawler.py [검색 키워드] [페이지 수 제한]
+```
+
+### results_to_csv.py
+`results_to_csv.py`를 실행하여 JSON 데이터를 CSV로 변환합니다.
+
+```bash
+python results_to_csv.py [파일 경로]
+```
+
 ## 주의 사항
 
+### crawler.py
 - 연결 문제 발생 시 5회 재시도 후 실패 처리.
 - 검색 중 마지막 페이지 도달 시 자동 중단.
 - 과도한 요청으로 사이트에 부하를 주지 않도록 유의.
